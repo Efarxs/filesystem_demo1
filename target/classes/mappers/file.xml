@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="exam.gcc.business.repository.FileRepository">
+
+    <select id="getFiles" resultType="exam.gcc.domain.SaveFile">
+        SELECT s.* from save_file s inner join user_file_association uf on uf.savefile_id = s.id
+        where uf.user_id = #{username}
+    </select>
+
+    <select id="getAllFiles" resultType="exam.gcc.domain.SaveFile">
+        SELECT s.* from save_file s
+    </select>
+    <select id="getFileByHash" resultType="exam.gcc.domain.SaveFile">
+        SELECT * from save_file where hash = #{md5_hash}
+    </select>
+
+    <delete id="deleteFile">
+        delete from save_file where id = #{id}
+    </delete>
+
+    <delete id="deleteFileConnection">
+        delete from user_file_association where savefile_id = #{id}
+    </delete>
+
+    <delete id="deleteFileConnection4User">
+        delete from user_file_association where savefile_id = #{id} and user_id = #{username}
+    </delete>
+
+    <insert id="addFile" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO save_file (`filename`, `location`, `updatetime`, `filesize`, `hash`)
+        VALUES (#{filename}, #{location}, #{updatetime}, #{filesize}, #{hash})
+    </insert>
+
+    <insert id="addFileConnection">
+        INSERT INTO user_file_association (user_id, savefile_id)
+        VALUES (#{username}, #{file_id})
+    </insert>
+
+</mapper>

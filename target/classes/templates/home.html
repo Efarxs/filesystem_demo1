@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>文件管理系统</title>
+    <link rel="stylesheet" href="/css/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/bootstrap/toastr.min.css">
+    <link rel="stylesheet" href="/css/dropzone/dropzone.min.css">
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th {
+            padding: 12px;
+            text-align: center;
+        }
+
+        td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h3>欢迎您,
+        <span th:if="${user.vip == 1}" style="color: red;">尊贵的VIP用户,</span>
+        <span th:if="${user.vip == 0}" style="color: blue;">普通用户,</span>
+        <span th:utext="${user.realname} + '[' + ${user.getUsername()} + ']'"></span>
+        <a href="/ktvip" th:if="${user.vip == 0}" style="color: blue;">秒升会员</a>
+    </h3>
+</div>
+<div id="table-container">
+    <table id="fileList">
+        <th colspan="5">文件上传系统</th>
+        <tr>
+            <td colspan="5">
+                <input type="file" id="fileInput" style="display: none;">
+                <button type="button" style="margin-right: 10px; float: right;" onclick="openUploadModal()">上传文件</button>
+                <button type="button" style="margin-right: 10px;float: right;" onclick="deleteFileList()">批量删除文件</button>
+            </td>
+        </tr>
+        <tr>
+            <td><input type="checkbox" id="selectAll">全选</input></td>
+            <td>文件名</td>
+            <td>大小</td>
+            <td>上传时间</td>
+            <td>操作</td>
+        </tr>
+    </table>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">文件上传</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" class="dropzone" action="/file/uploadFile" method="post" enctype="multipart/form-data">
+                    <div class="fallback">
+                        <input name="file" type="file" multiple />
+                    </div>
+                </form>
+                <div class="progress" style="display: none;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="startUpload()">开始上传</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+
+<script src="/js/jquery/jquery-3.6.4.js"></script>
+<script src="/js/popper/umd/popper.min.js"></script>
+<script src="/js/bootstrap/bootstrap.min.js"></script>
+<script src="/js/bootstrap/toastr.min.js"></script>
+<script src="/js/dropzone/dropzone.min.js"></script>
+<script src="/js/md5/spark-md5.min.js"/></script>
+<script>
+    // 在全选的checkbox上绑定事件
+    $("#selectAll").change(function () {
+        // 获取全选的状态
+        let isChecked = $(this).prop("checked");
+        // 设置所有具有特定类的checkbox的状态
+        $(".file-checkbox").prop("checked", isChecked);
+    });
+
+    // 在每个单独的checkbox上绑定事件
+    $(".file-checkbox").change(function () {
+        // 检查是否所有具有特定类的checkbox都被选中，如果是，则将全选的checkbox勾选，否则取消勾选
+        let allChecked = $(".file-checkbox:checked").length === $(".file-checkbox").length;
+        $("#selectAll").prop("checked", allChecked);
+    });
+
+    function formatDateFromBackend(dateString) {
+        let date = new Date(Date.parse(dateString));
+        return date;
+    }
+    function formatDate(date) {
+        if(typeof date === "string"){
+            date = formatDateFromBackend(date);
+        }
+        let year = date.getFullYear();
+        let month = ('0' + (date.getMonth() + 1)).slice(-2);
+        let day = ('0' + date.getDate()).slice(-2);
+        let hours = ('0' + date.getHours()).slice(-2);
+        let minutes = ('0' + date.getMinutes()).slice(-2);
+        let seconds = ('0' + date.getSeconds()).slice(-2);
+        let formattedDate = year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+        return formattedDate;
+    }
+
+    function formatFileSize(sizeInBytes) {
+        if (sizeInBytes < 1024) {
+            return sizeInBytes.toFixed(2) + ' B';
+        } else if (sizeInBytes < 1024 * 1024) {
+            return (sizeInBytes / 1024).toFixed(2) + ' KB';
+        } else if (sizeInBytes < 1024 * 1024 * 1024) {
+            return (sizeInBytes / (1024 * 1024)).toFixed(2) + ' MB';
+        } else {
+            return (sizeInBytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+    }
+
+    function openUploadModal() {
+        $('#uploadModal').modal('show');
+    }
+
+    function startUpload() {
+        $('#uploadForm .dz-start').click();
+    }
+
+    function downloadFile(location) {
+        $.ajax({
+            url: "/file/checkFile",
+            type: "POST",
+            data: { location: location },
+            success: function (data) {
+                if (data === 'success') {
+                    triggerDownload(location); //如果文件存在，触发下载
+                } else {
+                    toastr.error('文件不存在或无法下载');
+                }
+            },
+            error: function() {
+                toastr.error('下载请求失败');
+            }
+        });
+    }
+
+    function triggerDownload(location) {
+        let downloadFrame = $('<iframe/>');
+        downloadFrame.css({ "display": "none" });
+        downloadFrame.attr("src", "/file/downloadFile?location=" + encodeURIComponent(location));
+        $('body').append(downloadFrame);
+    }
+
+    function deleteFile(id, location) {
+        $.ajax({
+            url: "/file/deleteFile",
+            async: false,
+            type: "POST",
+            data: {id:id, location:location},
+            success: function (data) {
+                if(data>0){
+                    toastr.success("删除成功！");
+                    setTimeout(function (){
+                        window.location.reload();
+                    },1000);
+                }
+            }
+        });
+    }
+
+    function deleteFileList() {
+        let ids = [];
+        let locations = [];
+
+        $('.file-checkbox:checked').each(function () {
+            ids.push(parseInt($(this).val()));
+            locations.push($(this).data('location'));
+        });
+        let data = {};
+        data["ids"] = ids;
+        data["locations"] = locations;
+        $.ajax({
+            url: "/file/deleteFileList",
+            async: false,
+            contentType: "application/json",
+            type: "POST",
+            data: JSON.stringify(data),
+            success: function (data) {
+                if(data>0){
+                    toastr.success("删除成功！");
+                    setTimeout(function (){
+                        window.location.reload();
+                    },1000);
+                }
+            }
+        });
+    }
+
+    function getFiles() {
+        $.ajax({
+            url: "/file/getFiles",
+            async: false,
+            type: "POST",
+            data: {},
+            success: function (data) {
+                if(data.length>0){
+                    createTable(data);
+                }
+            }
+        });
+    }
+
+    function createTable(data) {
+        const $table = $('#fileList');
+
+        $.each(data, function (rowIndex, rowData) {
+            let trHtml = '<tr>';
+            trHtml += '<td><input type="checkbox" class="file-checkbox" data-location="' + rowData.location +'" value="' + rowData.id + '"/></td>';
+            trHtml += '<td>'+rowData.filename+'</td>';
+            trHtml += '<td>'+formatFileSize(rowData.filesize)+'</td>';
+            trHtml += '<td>'+formatDate(rowData.updatetime)+'</td>';
+            trHtml += '<td><button type="button" onclick="downloadFile(\''+rowData.location+'\')">下载</button>&nbsp;&nbsp;'
+                +'<button type="button" onclick="deleteFile('+rowData.id+',\''+rowData.location+'\')">删除</button></td>';
+            trHtml += '</tr>';
+            $(trHtml).appendTo($table);
+        });
+    }
+
+    Dropzone.autoDiscover = false;
+    $(document).ready(function () {
+        let myDropzone = new Dropzone("#uploadForm", {
+            autoProcessQueue: true,
+            maxFilesize: 2048, //2GB限制
+            addRemoveLinks: true,
+            init: function () {
+                this.on("addedfile", function (file) {
+                    $('.progress').show();
+                    // 计算md5值
+                    let reader = new FileReader();
+                    reader.onload = function (e) {
+                        let spark = new SparkMD5.ArrayBuffer();
+                        spark.append(e.target.result);
+                        // 将md5值保存到文件对象中
+                        file.md5 = spark.end();
+
+                        console.log(file.md5);
+
+                        // 向服务器发送请求来判断md5值是否存在
+                        $.ajax({
+                            url: '/file/check',
+                            method: 'GET',
+                            data: { hash: file.md5 },
+                            success: function (data) {
+                                if (data === 'success') {
+                                    // 如果md5值存在，取消上传
+                                    myDropzone.removeFile(file);
+                                    // 手动触发success事件
+                                    myDropzone.emit("success", file);
+                                    //toastr.info('文件已存在，无需上传！');
+                                    return true;
+                                }
+                            }
+                        });
+                    };
+                    // 将文件内容转换成二进制数组，确保精准计算出文件md5的值
+                    reader.readAsArrayBuffer(file);
+
+                });
+                this.on("uploadprogress", function (file, progress) {
+                    $('.progress-bar').width(progress + '%');
+                });
+                this.on("success", function (file,response) {
+                    toastr.success('文件上传成功！');
+                    setTimeout(function (){
+                        window.location.reload();
+                    },1000);
+                });
+                this.on("error", function (file,response) {
+                    //console.log(response);
+                    if (response !== "Upload canceled.") {
+                        toastr.error('文件上传失败！');
+                    }
+                });
+            }
+        });
+
+        $('#uploadModal').on('shown.bs.modal', function () {
+            $('#uploadForm').on('click', '.start', function () {
+                myDropzone.processQueue();
+            });
+        });
+        getFiles();
+    });
+
+</script>
+</html>

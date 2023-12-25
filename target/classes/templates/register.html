@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>注册</title>
+  <link rel="stylesheet" href="/css/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/bootstrap/toastr.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-container {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      text-align: center;
+      width: 500px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      text-align: left;
+    }
+
+    input {
+      width: calc(100% - 20px);
+      padding: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007bff;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <h2>注册</h2>
+  <form id="userForm">
+    <div>
+      <label for="username">用户名:</label>
+      <input type="text" id="username" required="required" />
+    </div>
+    <div>
+      <label for="realname">真实姓名:</label>
+      <input type="text" id="realname" required="required" />
+    </div>
+    <div>
+      <label for="password">密码：</label>
+      <input type="password" id="password" required="required" />
+    </div>
+    <div>
+      <label for="confirmPassword">确认密码：</label>
+      <input type="password" id="confirmPassword" required="required" />
+    </div>
+    <div>
+      <button type="button" onclick="submitRegistrationForm()">注册</button>
+      <button type="button" onclick="toRegister()">返回首页</button>
+    </div>
+  </form>
+</div>
+</body>
+<script src="/js/jquery/jquery-3.6.4.js"></script>
+<script src="/js/popper/umd/popper.min.js"></script>
+<script src="/js/bootstrap/bootstrap.min.js"></script>
+<script src="/js/bootstrap/toastr.min.js"></script>
+<script>
+  function toRegister(){
+    window.location.href = "/";
+  }
+
+  function submitRegistrationForm() {
+    let password = $("#password").val();
+    let confirmPassword = $("#confirmPassword").val();
+
+    if(password !== confirmPassword) {
+      toastr.warning('两次输入的密码不一致！');
+      return false;
+    }
+
+    if($("#username").val().trim()===""||$("#password").val().trim()===""||$("#confirmPassword").val().trim()===""||
+            $("#realname").val().trim()===""){
+      toastr.warning('不可输入空值！');
+      return false;
+    }
+
+    $.ajax({
+      url: "/registerUserAccount",
+      async: false,
+      type: "POST",
+      data: {username:$("#username").val().trim(),password:$("#password").val().trim(),confirmPassword:$("#confirmPassword").val().trim(),
+        realname:$("#realname").val().trim()},
+      success: function (data) {
+        if(data==="success"){
+          window.location.href = "/";
+        }else{
+          toastr.warning(data);
+          return false;
+        }
+      }
+    });
+
+  }
+</script>
+</html>

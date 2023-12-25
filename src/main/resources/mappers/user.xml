@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="exam.gcc.business.repository.UserRepository">
+    <update id="updateUserVip">
+        UPDATE user SET `vip`=${vip}
+    </update>
+
+    <select id="findByUsername" resultType="exam.gcc.domain.User">
+        SELECT u.* FROM user u where u.username = #{username}
+    </select>
+
+    <insert id="createUser">
+        INSERT INTO user (username, password, salt, realname)
+        VALUES (#{username}, #{password}, #{salt}, #{realname})
+    </insert>
+
+</mapper>
